@@ -8,12 +8,16 @@ name is necessary
 
 from enum import Enum
 import csv
+import json
 import pandas as pd
+import numpy as np
 
 log_name = 'logs.log'
 train_ret_name = 'tret.csv'
 return_name = 'return.csv'
 loss_name = 'loss.csv'
+video_name = 'videos'
+numpy_mtx = 'matx.json'
 
 
 def join(folder, name):
@@ -28,6 +32,7 @@ class Mode(Enum):
     RET_F = 4   # return csv
     STD_LOG = 5  # both STDOUT and LOG file
     LOSS_F = 6  # loss file
+    NUMPY = 7  # numpy matrix
 
 
 class Logger:
@@ -42,13 +47,15 @@ class Logger:
         self.return_csv_obj = csv.writer(self.return_csv)
         self.loss_csv = open(join(foldername, loss_name), 'a', newline='', buffering=1)
         self.loss_csv_obj = csv.writer(self.loss_csv)
+        self.numpy_obj = open(join(foldername, numpy_mtx), 'a')
 
         self.log_funcs = [self.__log_STDOUT,
                           self.__log_LOG_F,
                           self.__log_TRAIN_RET_F,
                           self.__log_RET_F,
                           self.__log_STD_LOG,
-                          self.__log_LOSS_F
+                          self.__log_LOSS_F,
+                          self.__log_NUMPY
                           ]
 
     def log(self, mode, msg):
@@ -65,14 +72,25 @@ class Logger:
         df_loss = pd.read_csv(join(self.foldername, return_name), names=['iteration', 'episode', 'loss'])
         return df_trainret, df_ret, df_loss
 
+    def video_folder(self):
+        return join(self.foldername, video_name)
+
+    def deserialize_numpy(self):
+        numpy_obj_read = open(join(self.foldername, numpy_mtx), 'r')
+        mtx = json.load(numpy_obj_read)
+        numpy_obj_read.close()
+        return np.array(mtx['weight'])
+
     def __del__(self):
         self.log_file.flush()
         self.train_ret_csv.flush()
         self.return_csv.flush()
+        self.numpy_obj.flush()
 
         self.log_file.close()
         self.train_ret_csv.close()
         self.return_csv.close()
+        self.numpy_obj.close()
 
     # -----------------------------------
     # Private functions.
@@ -122,6 +140,14 @@ class Logger:
 
         if mode == Mode.LOSS_F:  # msg: [iteration, episode, loss]
             self.loss_csv_obj.writerow(msg)
+            return True
+
+        return False
+
+    def __log_NUMPY(self, mode, matrix):
+
+        if mode == Mode.NUMPY:  # msg: [iteration, episode, loss]
+            json.dump({'weight': matrix.tolist()}, self.numpy_obj)
             return True
 
         return False
