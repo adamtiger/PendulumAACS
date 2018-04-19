@@ -15,7 +15,7 @@ from gym.wrappers import Monitor
 # CONSTANTS of matrix size
 ROWS = 360 + 1  # th
 COLS = 200 + 1  # thdot
-DPTS = 2 + 1   # action
+DPTS = 1 + 1   # action
 
 PI = math.pi
 
@@ -46,7 +46,7 @@ class Q:
         self.lr = 1.0
         self.gamma = 0.8
 
-        self.epsilon = 0.95
+        self.epsilon = 0.4
 
     def __env_init_fn(self):
         self.env.reset()
@@ -74,7 +74,7 @@ class Q:
         if action is None:
             return (row, col)
         else:
-            dph = int(round((action + 1.0)))#/ 4.0 * (DPTS -1)))
+            dph = 1 if action == 1.0 else 0 #int(round((action + 1.0)))#/ 4.0 * (DPTS -1)))
             return (row, col, dph)
 
     def __argmin(self, state):
@@ -92,20 +92,22 @@ class Q:
                        +
                        self.lr * (cost + 0.0 if done else self.gamma * self.q[idx_next]))
         self.alpha_rec[idx] += 1
-        self.lr = max(self.lr - 0.00005, 0.02)
 
     def __select_act(self, state, explorefree=False):
         best_act = self.__argmin(state)
         dice = random.randint(1, 1000)
         if dice > self.epsilon * 1000 or explorefree:
-            return best_act * 1.0 - 1.0
+            return best_act * 2.0 - 1.0
         else:
             idcs = [idx for idx in range(0, DPTS)]
             idcs.remove(best_act)
-            return random.choice(idcs) * 1.0 - 1.0
+            return random.choice(idcs) * 2.0 - 1.0
 
     def __decrease_eps(self):
-        self.epsilon = max(self.epsilon - 0.01, 0.1)
+        self.epsilon = max(self.epsilon - 0.005, 0.1)
+
+    def __decrease_lr(self):
+        self.lr = max(self.lr - 0.005, 0.001)
 
     def run(self):
 
@@ -121,13 +123,14 @@ class Q:
 
         while episode < self.max_episode:
 
-            if done or cntr % 250 == 0:
+            if done or cntr % 50 == 0:
                 episode += 1
                 state = self.__env_init_fn()
                 action = self.__select_act(state)
                 self.log.log(Mode.TRAIN_RET_F, [cntr, episode, total_cost])
                 total_cost = 0
                 self.__decrease_eps()
+                self.__decrease_lr()
 
                 if episode % 10 == 0:
                     rtn, scs = self.evaluate()
