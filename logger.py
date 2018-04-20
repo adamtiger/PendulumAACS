@@ -24,6 +24,13 @@ def join(folder, name):
     return folder + '/' + name
 
 
+def deserialize_numpy(foldername):
+    numpy_obj_read = open(join(foldername, numpy_mtx), 'r')
+    mtx = json.load(numpy_obj_read)
+    numpy_obj_read.close()
+    return np.array(mtx['weight'])
+
+
 class Mode(Enum):
 
     STDOUT = 1

@@ -13,8 +13,8 @@ import gym
 from gym.wrappers import Monitor
 
 # CONSTANTS of matrix size
-ROWS = 360 + 1  # th
-COLS = 200 + 1  # thdot
+ROWS = 72 + 1  # th
+COLS = 20 + 1  # thdot
 DPTS = 1 + 1   # action
 
 PI = math.pi
@@ -46,7 +46,7 @@ class Q:
         self.lr = 1.0
         self.gamma = 0.8
 
-        self.epsilon = 0.4
+        self.epsilon = 0.5
 
     def __env_init_fn(self):
         self.env.reset()
@@ -67,14 +67,14 @@ class Q:
         else:
             theta = 2.0 * PI - theta
 
-        row = int(round(math.degrees(theta)))
+        row = int(round(math.degrees(theta)) / 360 * (ROWS-1))
 
         col = int(round((dot + 8.0) / 16.0 * (COLS - 1)))
 
         if action is None:
             return (row, col)
         else:
-            dph = 1 if action == 1.0 else 0 #int(round((action + 1.0)))#/ 4.0 * (DPTS -1)))
+            dph = 1 if action == 1.0 else 0  #int(round((action + 1.0)))#/ 4.0 * (DPTS -1)))
             return (row, col, dph)
 
     def __argmin(self, state):
@@ -87,10 +87,9 @@ class Q:
 
     def __update(self, state, action, cost, next_state, done, next_action=None):
         idx = self.__indexer(state, action)
+        self.lr = 1.0 / self.alpha_rec[idx]
         idx_next = self.__indexer(next_state, next_action)
-        self.q[idx] = ((1 - self.lr) * self.q[idx]
-                       +
-                       self.lr * (cost + 0.0 if done else self.gamma * self.q[idx_next]))
+        self.q[idx] = ((1 - self.lr) * self.q[idx] + self.lr * (cost + (0.0 if done else self.gamma * self.q[idx_next])))
         self.alpha_rec[idx] += 1
 
     def __select_act(self, state, explorefree=False):
@@ -104,10 +103,10 @@ class Q:
             return random.choice(idcs) * 2.0 - 1.0
 
     def __decrease_eps(self):
-        self.epsilon = max(self.epsilon - 0.005, 0.1)
+        self.epsilon = max(self.epsilon - 0.001, 0.1)
 
     def __decrease_lr(self):
-        self.lr = max(self.lr - 0.005, 0.001)
+        self.lr = max(self.lr - 0.0002, 0.01)
 
     def run(self):
 
@@ -123,18 +122,19 @@ class Q:
 
         while episode < self.max_episode:
 
-            if done or cntr % 50 == 0:
+            if done or cntr % 250 == 0:
                 episode += 1
                 state = self.__env_init_fn()
                 action = self.__select_act(state)
                 self.log.log(Mode.TRAIN_RET_F, [cntr, episode, total_cost])
                 total_cost = 0
+                nzeros = np.count_nonzero(self.q)
                 self.__decrease_eps()
                 self.__decrease_lr()
 
                 if episode % 10 == 0:
                     rtn, scs = self.evaluate()
-                    self.log.log(Mode.STD_LOG, str(episode) + ': ' + str(rtn) + ' cost: ' + str(min_cost) + ' scs: ' + str(scs))
+                    self.log.log(Mode.STD_LOG, str(episode) + ': ' + str(rtn) + ' cost: ' + str(min_cost) + ' scs: ' + str(scs) + ' nonzeros: ' + str(nzeros))
                     self.log.log(Mode.RET_F, [cntr, episode, rtn])
 
             next_state, cost, done, inf = self.env.step([action])
@@ -150,7 +150,7 @@ class Q:
         self.log.log(Mode.NUMPY, self.q)
         self.log.log(Mode.STDOUT, 'Learning finished. matrix was saved.')
 
-    def evaluate(self, video=False):
+    def evaluate(self, video=False, show=False):
 
         total_cost = 0
         cntr = 0
@@ -177,7 +177,8 @@ class Q:
 
             action = self.__select_act(state, explorefree=False)
             state, cost, done, _ = self.env.step([action])
-            #self.env.render()
+            if show:
+                self.env.render()
             total_cost += cost
             cntr += 1
 
