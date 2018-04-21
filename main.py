@@ -17,6 +17,10 @@ parser = argparse.ArgumentParser(description='Generalization over Pendulum')
 
 parser.add_argument('--mode', default=0, type=int, metavar='N',
         help='The mode of the run. 0: daemon training, 1: regression')
+parser.add_argument('--epochs', default=1, type=int, metavar='N',
+        help='The number of epochs to train.')
+parser.add_argument('--batch', default=32, type=int, metavar='N',
+        help='Batch size.')
 
 args = parser.parse_args()
 
@@ -58,8 +62,8 @@ if args.mode == 0:
     run_training_batch()
 elif args.mode == 1:
     base_folder = 'files/params'
-    reg = gz.Regression([(base_folder + str(x), x) for x in range(1)])
-    h = reg.regression(32, 2)
+    reg = gz.Regression([(base_folder + str(x), x) for x in range(17)])
+    h = reg.regression(32, args.epochs)
     log = logger.Logger('files')
     log.log(logger.Mode.STD_LOG, str(h.history))
     print('Finish.')
