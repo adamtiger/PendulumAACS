@@ -9,7 +9,6 @@ def create_video(init_params):
 
     q = q_learn.Q(max_ep, folder, constraints, goal)
     q.load_from_file()
-    q.epsilon = 0.1
 
     rtn, scs = q.evaluate(video=False, show=True)
     print(str(rtn) + ' ' + str(scs))

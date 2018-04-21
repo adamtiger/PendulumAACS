@@ -6,6 +6,7 @@ Q-values for s, a pairs.
 '''
 
 import math
+import os
 import numpy as np
 import random
 from logger import Mode, Logger
@@ -26,9 +27,21 @@ def wrapper_parallel_execution(init_params):
     constraints = init_params[2]
     goal = init_params[3]
 
+    os.mkdir(folder)
     q = Q(max_ep, folder, constraints, goal)
 
-    q.run()
+    avg_scs = q.run()
+    print('Average number of successes per episode: ' + str(avg_scs))
+
+
+def indexer(state):
+    theta, dot = state[0], state[1]
+
+    row = int(theta / 360 * (ROWS - 1))
+
+    col = int(round((dot + 8.0) / 16.0 * (COLS - 1)))
+
+    return (row, col)
 
 
 class Q:
@@ -93,9 +106,10 @@ class Q:
         self.alpha_rec[idx] += 1
 
     def __select_act(self, state, explorefree=False):
+        epsilon = (0.1 if explorefree else self.epsilon)
         best_act = self.__argmin(state)
         dice = random.randint(1, 1000)
-        if dice > self.epsilon * 1000 or explorefree:
+        if dice > epsilon * 1000:
             return best_act * 2.0 - 1.0
         else:
             idcs = [idx for idx in range(0, DPTS)]
@@ -119,6 +133,7 @@ class Q:
         state = None
         min_cost = 0
         action = [0.0]
+        avg_scs = 0
 
         while episode < self.max_episode:
 
@@ -134,6 +149,7 @@ class Q:
 
                 if episode % 10 == 0:
                     rtn, scs = self.evaluate()
+                    avg_scs += scs
                     self.log.log(Mode.STD_LOG, str(episode) + ': ' + str(rtn) + ' cost: ' + str(min_cost) + ' scs: ' + str(scs) + ' nonzeros: ' + str(nzeros))
                     self.log.log(Mode.RET_F, [cntr, episode, rtn])
 
@@ -149,6 +165,8 @@ class Q:
 
         self.log.log(Mode.NUMPY, self.q)
         self.log.log(Mode.STDOUT, 'Learning finished. matrix was saved.')
+
+        return avg_scs * 10 / self.max_episode
 
     def evaluate(self, video=False, show=False):
 
@@ -175,7 +193,7 @@ class Q:
                 state = self.__env_init_fn()
                 cntr = 0
 
-            action = self.__select_act(state, explorefree=False)
+            action = self.__select_act(state, explorefree=True)
             state, cost, done, _ = self.env.step([action])
             if show:
                 self.env.render()
