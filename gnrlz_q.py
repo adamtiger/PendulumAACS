@@ -25,6 +25,8 @@ class LogLosses(Callback):
         msg = [self.cntr, logs.get('loss'), logs.get('val_loss'), logs.get('acc'), logs.get('val_acc')]
         self.log.log(logger.Mode.LOSS_F, msg)
         self.cntr += 1
+        if self.cntr % 500 == 0:
+            print('Epoch: ' + str(self.cntr))
 
 class Regression:
 
@@ -87,6 +89,6 @@ class Regression:
     def regression(self, batch_size, epochs):
         print('Start regression.')
         history = self.net.fit(x=self.train_data['x'], y=self.train_data['y'],
-                     batch_size=batch_size, epochs=epochs, validation_split=0.2, callbacks=[self.log_losses])
+                     batch_size=batch_size, epochs=epochs, validation_split=0.2, callbacks=[self.log_losses], verbose=0)
         self.net.save_weights('files/gen_weights.h5')
         return history
