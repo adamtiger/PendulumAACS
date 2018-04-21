@@ -16,6 +16,10 @@ from keras.callbacks import Callback
 
 class LogLosses(Callback):
 
+    def __init__(self, net):
+        super().__init__()
+        self.net = net
+
     def on_train_begin(self, logs={}):
         self.log = logger.Logger('files')
         self.cntr = 0
@@ -26,6 +30,7 @@ class LogLosses(Callback):
         self.log.log(logger.Mode.LOSS_F, msg)
         self.cntr += 1
         if self.cntr % 500 == 0:
+            self.net.save_weights('files/tmp' + str(self.cntr) + '_weights.h5')
             print('Epoch: ' + str(self.cntr))
 
 class Regression:
@@ -51,7 +56,7 @@ class Regression:
 
         print('Creating network.')
         self.net = self.__create_model()
-        self.log_losses = LogLosses()
+        self.log_losses = LogLosses(self.net)
 
     def __create_model(self):
 
