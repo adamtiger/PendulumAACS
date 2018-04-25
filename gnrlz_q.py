@@ -33,6 +33,7 @@ class LogLosses(Callback):
             self.net.save_weights('files/tmp' + str(self.cntr) + '_weights.h5')
             print('Epoch: ' + str(self.cntr))
 
+
 class Regression:
 
     def __init__(self, fd_num):
