@@ -37,7 +37,7 @@ def wrapper_parallel_execution(init_params):
 def indexer(state):
     theta, dot = state[0], state[1]
 
-    row = int(theta / 360 * (ROWS - 1))
+    row = int(theta / math.pi * (ROWS - 1))
 
     col = int(round((dot + 8.0) / 16.0 * (COLS - 1)))
 

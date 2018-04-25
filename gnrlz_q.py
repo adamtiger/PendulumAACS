@@ -12,6 +12,7 @@ from logger import deserialize_numpy
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.callbacks import Callback
+from keras.optimizers import Adam
 
 
 class LogLosses(Callback):
@@ -64,10 +65,12 @@ class Regression:
         net = Sequential()
         net.add(Dense(5, input_shape=(4,)))
         net.add(Activation('relu'))
+        net.add(Dense(24))
+        net.add(Activation('relu'))
         net.add(Dense(2))
         net.add(Activation('softmax'))
-
-        net.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
+        adam = Adam(lr=0.001)
+        net.compile(optimizer=adam, loss='categorical_crossentropy', metrics=['accuracy'])
         return net
 
     def __create_samples(self, folder, num):
@@ -86,9 +89,10 @@ class Regression:
         train_y = []
         for thxthdot in thxthdots:
             idx = indexer(thxthdot)
-            act_vals = (np.array([1, 0]) if np.argmax(mtx[idx[0], idx[1], :]) == 0 else np.array([0, 1]))
-            train_x.append(np.array([thxthdot[0], thxthdot[1], goal[0], goal[1]]))
-            train_y.append(act_vals)
+            if abs(mtx[idx[0], idx[1], 0]) > 0.0000001 or abs(mtx[idx[0], idx[1], 1]) > 0.0000001:
+                act_vals = (np.array([1, 0]) if np.argmax(mtx[idx[0], idx[1], :]) == 0 else np.array([0, 1]))
+                train_x.append(np.array([thxthdot[0], thxthdot[1], goal[0], goal[1]]))
+                train_y.append(act_vals)
 
         return np.vstack(train_x), np.vstack(train_y)
 
